@@ -6,8 +6,7 @@
             [com.wsscode.pathom.core :as p]
             [com.wsscode.pathom.misc :as p.misc]
             [com.wsscode.spec-inspec :as si]
-            [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <- ?]]
-            [fulcro.client.primitives :as fp]))
+            [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <- ?]]))
 
 (>def ::keep-ui? boolean?)
 (>def ::initialize (s/or :fn fn? :input any?))
@@ -96,17 +95,18 @@
                         :or    {initialize true}}
                        comp
                        x]
-  (cond-> x
-    initialize
-    (p/deep-merge (cond
-                    (fn? initialize)
-                    (initialize (fp/get-initial-state comp nil))
+  (let [get-initial-state (requiring-resolve 'fulcro.client.primitives/get-initial-state)]
+    (cond-> x
+      initialize
+      (p/deep-merge (cond
+                      (fn? initialize)
+                      (initialize (get-initial-state comp nil))
 
-                    (:data initialize)
-                    (fp/get-initial-state comp (:data initialize))
+                      (:data initialize)
+                      (get-initial-state comp (:data initialize))
 
-                    :else
-                    (fp/get-initial-state comp nil)))))
+                      :else
+                      (get-initial-state comp nil))))))
 
 ; actual props generator
 
@@ -208,11 +208,11 @@
   (let [ids (volatile! {})]
     (walk/postwalk
       (fn [x]
-        (when (fp/tempid? x) (vswap! ids assoc x (gen-uuid)))
+        (when (((requiring-resolve 'fulcro.client.primitives/tempid?) x)) (vswap! ids assoc x (gen-uuid)))
         x)
       params)
     (if (seq @ids)
-      {::fp/tempids @ids}
+      {:fulcro.client.primitives/tempids @ids}
       {})))
 
 (defn query-props-gen-mutate
@@ -257,7 +257,7 @@
            (bound-unbounded-recursions (get env ::unbounded-recursion-gen-size 3)))))))
 
 (defn comp-props-generator [env comp]
-  (gen/let [query-data (query-props-generator env (fp/get-query comp))]
+  (gen/let [query-data (query-props-generator env ((requiring-resolve 'fulcro.client.primitives/get-query) comp))]
     (comp-initialize env comp query-data)))
 
 (defn set-gen [gen-env kw gen]
@@ -277,7 +277,7 @@
   ([comp]
    (comp->props {} comp))
   ([{::keys [initialize] :as env :or {initialize true}} comp]
-   (->> (query->props env (fp/get-query comp))
+   (->> (query->props env ((requiring-resolve 'fulcro.client.primitives/get-query) comp))
         (comp-initialize env comp))))
 
 (defn comp->db
@@ -285,5 +285,5 @@
   ([comp]
    (comp->db {} comp))
   ([env comp]
-   (as-> (query->props env (fp/get-query comp)) <>
-     (fp/tree->db comp <> true))))
+   (as-> (query->props env ((requiring-resolve 'fulcro.client.primitives/get-query) comp)) <>
+     ((requiring-resolve 'fulcro.client.primitives/tree->db) comp <> true))))
