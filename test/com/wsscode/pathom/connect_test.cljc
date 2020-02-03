@@ -888,6 +888,7 @@
                                                                p/map-reader
                                                                {::env #(p/join % %)}
                                                                pc/all-readers
+                                                               pc/open-join-context-reader
                                                                (p/placeholder-reader ">")]
                                      ::p/placeholder-prefixes #{">"}
                                      ::pc/resolver-dispatch   resolver-fn
@@ -936,7 +937,7 @@
 
   (testing "follows a basic attribute with params"
     (is (= (parser {::p/entity (atom {:user/id 1 :user/foo "bar"})}
-             [(list :user/name {:some "attr"}) :cache])
+                   [(list :user/name {:some "attr"}) :cache])
            {:user/name "Mel"
             :cache     {[`user-by-id {:user/id 1} {:some "attr"}]
                         {:user/age   26
@@ -965,7 +966,7 @@
 
   (testing "error when an error happens"
     (is (thrown-with-msg? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) #"user not found"
-          (parser {::p/entity (atom {:user/id 999})}
+                          (parser {::p/entity (atom {:user/id 999})}
             [:user/name]))))
 
   (testing "read dependend attributes when neeeded"
@@ -980,7 +981,7 @@
 
   (testing "nested resource"
     (is (= (parser {::p/entity (atom {:user/login "meel"})}
-             [{:user/network [:network/id]}])
+                   [{:user/network [:network/id]}])
            {:user/network {:network/id "twitter"}})))
 
   (testing "ident read"
@@ -994,13 +995,34 @@
                         [:need-combined]}])
            {[:user/id 1] {:need-combined 6}})))
 
+  (testing "join context"
+    (is (= (parser {} [{{:need-a 1
+                         :need-b 2
+                         :need-c 3}
+                        [:need-combined]}])
+           {{:need-a 1
+             :need-b 2
+             :need-c 3} {:need-combined 6}})))
+
+  (testing "nested join context with ident params, no entity sharing across top-level joins"
+    (is (= (parser {} [{'([:user/id 1] {:pathom/context {:need-a 1}})
+                        [{{:need-b 2
+                           :need-c 3}
+                          [:need-combined]}]}
+                       {{:need-a 3}
+                        [:need-combined]}])
+           {[:user/id 1]
+            {{:need-b 2
+              :need-c 3} {:need-combined 6}}
+            {:need-a 3} {:need-combined ::p/not-found}})))
+
   (testing "read allows for flow"
     (is (= (parser {} [{[:user/id 1] [{:>/alias [:user/name]}]}])
            {[:user/id 1] {:>/alias {:user/name "Mel"}}})))
 
   (testing "stops processing if entity is nil"
     (is (= (parser {::p/entity (atom {:user/id 2})}
-             [{:user/network [:network/id]}])
+                   [{:user/network [:network/id]}])
            {:user/network ::p/not-found})))
 
   (testing "short circuit error "

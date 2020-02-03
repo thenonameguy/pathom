@@ -387,7 +387,7 @@
                              :missing missing})))
                    (sort-by (comp count :missing)))]
         (loop [[{:keys [sym attrs]} & t :as xs] r]
-          (if xs
+          (when xs
             (if-not (contains? dependency-track [sym attrs])
               (let [e       (try
                               (->> (p/entity (-> env
@@ -417,7 +417,7 @@
                                :missing missing})))
                      (sort-by (comp count :missing)))]
           (loop [[{:keys [sym attrs]} & t :as xs] r]
-            (if xs
+            (when xs
               (if-not (contains? dependency-track [sym attrs])
                 (let [e       (try
                                 (->> (p/entity (-> env
@@ -1467,8 +1467,8 @@
      (p/join indexes env))})
 
 (defn indexed-ident [{::keys [indexes] :as env}]
-  (if-let [attr (p/ident-key env)]
-    (if (contains? (::idents indexes) attr)
+  (when-let [attr (p/ident-key env)]
+    (when (contains? (::idents indexes) attr)
       {attr (p/ident-value env)})))
 
 (defn resolver
@@ -1593,6 +1593,15 @@
           ent           (merge {key (p/ident-value env)} extra-context)]
       (p/join (atom ent) env))
     ::p/continue))
+
+(defn open-join-context-reader
+  [env]
+  (let [key (-> env :ast :key)]
+    (if (eql/join-context? key)
+      (do
+        (p/swap-entity! env #(merge % key))
+        (p/join env))
+      ::p/continue)))
 
 (defn batch-resolver
   "Return a resolver that will dispatch to single-fn when the input is a single value, and multi-fn when

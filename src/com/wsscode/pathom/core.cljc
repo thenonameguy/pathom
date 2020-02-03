@@ -330,11 +330,11 @@
   (let-chan [e (entity env attributes)]
     (let [missing (set/difference (set attributes)
                                   (set (keys (elide-not-found e))))]
-      (if (seq missing)
+      (when (seq missing)
         (throw (ex-info (str "Entity attributes " (pr-str missing) " could not be realized")
-                 {::entity             e
-                  ::path               path
-                  ::missing-attributes missing})))
+                        {::entity             e
+                         ::path               path
+                         ::missing-attributes missing})))
       e)))
 
 (defn entity-attr!
@@ -417,10 +417,10 @@
      :as    env}]
    (let [e            (entity env)
          placeholder? (placeholder-key? env (:dispatch-key ast))
-         union-path   (if (union-children? ast)
+         union-path   (when (union-children? ast)
                         (let [union-path (or union-path default-union-path)
                               path       (cond
-                                           (fn? union-path) (union-path env)
+                                           (fn? union-path)      (union-path env)
                                            (keyword? union-path) (get (entity! env [union-path]) union-path))]
                           path))
          query        (if (union-children? ast)
@@ -565,23 +565,23 @@
   "The first element of an ident."
   [{:keys [ast]}]
   (let [key (some-> ast :key)]
-    (if (vector? key) (first key))))
+    (when (vector? key) (first key))))
 
 (defn ident-value* [key]
-  (if (vector? key) (second key)))
+  (when (vector? key) (second key)))
 
 (defn ident-value
   "The second element of an ident"
   [{:keys [ast]}]
   (let [key (some-> ast :key)]
-    (if (sequential? key) (second key))))
+    (when (sequential? key) (second key))))
 
 (defn elide-ast-nodes
   "Remove items from a query (AST) that have a key listed in the elision-set"
   [{:keys [key union-key] :as ast} elision-set]
   (let [union-elision? (contains? elision-set union-key)]
     (when-not (or union-elision? (contains? elision-set key))
-      (update ast :children (fn [c] (if c (vec (keep #(elide-ast-nodes % elision-set) c))))))))
+      (update ast :children (fn [c] (when c (vec (keep #(elide-ast-nodes % elision-set) c))))))))
 
 (defn normalize-env [{:keys [ast] :as env}]
   (cond-> (update env ::path (fnil conj []) (:key ast))
@@ -590,7 +590,7 @@
 (defn merge-queries* [qa qb]
   (reduce (fn [ast {:keys [key type params] :as item-b}]
             (if-let [[idx item] (->> ast :children
-                                     (keep-indexed #(if (-> %2 :key (= key)) [%1 %2]))
+                                     (keep-indexed #(when (-> %2 :key (= key)) [%1 %2]))
                                      first)]
               (cond
                 (or (= :join (:type item) type)
