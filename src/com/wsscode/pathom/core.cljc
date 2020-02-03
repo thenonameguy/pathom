@@ -559,7 +559,7 @@
        (= 2 (count x))))
 
 (defn ident-key* [key]
-  (if (vector? key) (first key)))
+  (when (vector? key) (first key)))
 
 (defn ident-key
   "The first element of an ident."
@@ -644,7 +644,7 @@
 (defn entity-dispatch
   "Dispatch on the first element (type) of an incoming ident."
   [{:keys [ast]}]
-  (if (vector? (:key ast))
+  (when (vector? (:key ast))
     (first (:key ast))))
 
 ;; NODE HELPERS
@@ -908,8 +908,9 @@
 
 (def trace-plugin pt/trace-plugin)
 
-(defn collapse-error-path [m path]
+(defn collapse-error-path
   "Reduces the error path to the last available nesting on the map m."
+  [m path]
   (vec
     (loop [path' path]
       (if (zero? (count path'))
@@ -918,7 +919,7 @@
           path'
           (recur (butlast path')))))))
 
-(defn raise-errors [data]
+(defn raise-errors
   "Extract errors from the data root and inject those in the same level where
    the error item is present. For example:
 
@@ -932,6 +933,7 @@
             :com.wsscode.pathom.core/errors {:item {:error \"some error\"}}}
 
    This makes easier to reach for the error when rendering the UI."
+  [data]
   (reduce
     (fn [m [path err]]
       (if (= ::reader-error (get-in m path))
@@ -1151,7 +1153,7 @@
     (-> (pp/parser {:read   (-> pathom-read'
                                 (apply-plugins plugins ::wrap-read)
                                 wrap-add-path)
-                    :mutate (if mutate (apply-plugins mutate plugins ::wrap-mutate))})
+                    :mutate (when mutate (apply-plugins mutate plugins ::wrap-mutate))})
         (apply-plugins plugins ::wrap-parser)
         (apply-plugins plugins ::wrap-parser2 settings)
         (wrap-setup-env {::async-parser? false})
@@ -1176,7 +1178,7 @@
     (-> (pp/async-parser {:read   (-> pathom-read'
                                       (apply-plugins plugins ::wrap-read)
                                       wrap-add-path)
-                          :mutate (if mutate (apply-plugins mutate plugins ::wrap-mutate))})
+                          :mutate (when mutate (apply-plugins mutate plugins ::wrap-mutate))})
         (apply-plugins plugins ::wrap-parser)
         (apply-plugins plugins ::wrap-parser2 settings)
         (wrap-setup-env {::async-parser? true})
@@ -1223,7 +1225,7 @@
     (-> (pp/parallel-parser {:read      (-> pathom-read'
                                             (apply-plugins plugins ::wrap-read)
                                             wrap-add-path)
-                             :mutate    (if mutate (apply-plugins mutate plugins ::wrap-mutate))
+                             :mutate    (when mutate (apply-plugins mutate plugins ::wrap-mutate))
                              :add-error add-error})
         (apply-plugins plugins ::wrap-parser)
         (apply-plugins plugins ::wrap-parser2 settings)
@@ -1282,11 +1284,12 @@
   "DEPRECATED: use ident-value instead"
   [ast]
   (let [key (some-> ast :key)]
-    (if (sequential? key) (second key))))
+    (when (sequential? key) (second key))))
 
-(defn ensure-attrs [env attributes]
+(defn ensure-attrs
   "DEPRECATED: use p/entity
-  Runs the parser against current element to garantee that some fields are loaded.
+  Runs the parser against current element to guarantee that some fields are loaded.
   This is useful when you need to ensure some values are loaded in order to fetch some
   more complex data."
+  [env attributes]
   (entity env attributes))
