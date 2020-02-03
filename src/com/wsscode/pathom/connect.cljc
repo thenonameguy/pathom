@@ -1907,13 +1907,13 @@
           (swap! indexes register [plugin-registry (get env ::register [])])
           (fn [env tx]
             (parser
-              (merge
-                {::resolver-dispatch resolver-dispatch-embedded
-                 ::mutate-dispatch   mutation-dispatch-embedded
-                 ::indexes           @indexes
-                 ::resolver-weights  resolver-weights
-                 ::pool-chan         pool-chan}
-                env) tx))))
+             (merge
+              {::resolver-dispatch resolver-dispatch-embedded
+               ::mutate-dispatch   mutation-dispatch-embedded
+               ::indexes           @indexes
+               ::resolver-weights  resolver-weights
+               ::pool-chan         pool-chan}
+              env) tx))))
 
       ::indexes
       indexes
