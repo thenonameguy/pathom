@@ -1,7 +1,6 @@
 (ns com.wsscode.pathom.diplomat.http
   (:require [clojure.spec.alpha :as s]
-            [com.wsscode.pathom.misc :as p.misc]
-            [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <- ?]]))
+            [com.fulcrologic.guardrails.core :refer [>def]]))
 
 (>def ::encode-type (s/with-gen keyword? #(s/gen #{::transit+json ::edn ::json})))
 

@@ -22,7 +22,6 @@
 
                  ; provided
 
-                 [cheshire/cheshire "5.8.1" :scope "provided"]
                  [clj-http "3.8.0" :scope "provided"]
                  [fulcrologic/fulcro "2.6.0" :scope "provided"]
                  [org.clojure/clojure "1.10.0" :scope "provided"]

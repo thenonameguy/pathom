@@ -1,11 +1,18 @@
 (ns com.wsscode.pathom.trace
-  #?(:cljs (:require-macros [com.wsscode.pathom.trace]))
-  (:require [clojure.spec.alpha :as s]
-            [#?(:clj  com.wsscode.async.async-clj
-                :cljs com.wsscode.async.async-cljs)
-             :refer [let-chan]]
-            [clojure.walk :as walk]
-            [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <- ?]]))
+  #?@
+   (:clj
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.walk :as walk]
+      [com.fulcrologic.guardrails.core :refer [=> >def >defn ?]]
+      [com.wsscode.async.async-clj :refer [let-chan]])]
+    :cljs
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.walk :as walk]
+      [com.fulcrologic.guardrails.core :refer [=> >def >defn ?]]
+      [com.wsscode.async.async-cljs :refer [let-chan]])
+     (:require-macros com.wsscode.pathom.trace)]))
 
 (>def ::event keyword?)
 (>def ::label string?)

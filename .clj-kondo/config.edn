@@ -1,0 +1,6 @@
+{:lint-as {com.wsscode.pathom.connect/defresolver clojure.core/defn
+           com.wsscode.pathom.connect/defmutation clojure.core/defn
+           com.wsscode.common.async-clj/let-chan  clojure.core/let
+           com.wsscode.common.async-cljs/let-chan clojure.core/let
+           com.wsscode.async.async-clj/*let-chan  clojure.core/let
+           com.wsscode.async.async-clj/let-chan   clojure.core/let}}

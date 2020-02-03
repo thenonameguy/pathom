@@ -1,24 +1,39 @@
 (ns com.wsscode.pathom.core
   (:refer-clojure :exclude [ident?])
-  #?(:cljs
-     (:require-macros [com.wsscode.pathom.core]))
-  (:require
-    [clojure.spec.alpha :as s]
-    [clojure.core.async :as async :refer [go <! >!]]
-    [#?(:clj  com.wsscode.async.async-clj
-        :cljs com.wsscode.async.async-cljs)
-     :as casync
-     :refer [go-catch <? let-chan chan? <?maybe <!maybe go-promise]]
-    [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <-]]
-    [com.wsscode.pathom.parser :as pp]
-    [com.wsscode.pathom.misc :as p.misc]
-    [clojure.set :as set]
-    [clojure.walk :as walk]
-    [edn-query-language.core :as eql]
-    #?(:cljs [goog.object :as gobj])
-    [com.wsscode.pathom.trace :as pt])
-  #?(:clj
-     (:import (clojure.lang IAtom IDeref))))
+  #?@
+   (:clj
+    [(:require
+      [clojure.core.async :as async :refer [<! >! go]]
+      [clojure.set :as set]
+      [clojure.spec.alpha :as s]
+      [clojure.walk :as walk]
+      [com.fulcrologic.guardrails.core :refer [=> >def >defn]]
+      [com.wsscode.async.async-clj
+       :as
+       casync
+       :refer
+       [<!maybe <? <?maybe chan? go-promise let-chan]]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.trace :as pt]
+      [edn-query-language.core :as eql])
+     (:import clojure.lang.IDeref)]
+    :cljs
+    [(:require
+      [clojure.core.async :as async :refer [<! >! go]]
+      [clojure.set :as set]
+      [clojure.spec.alpha :as s]
+      [clojure.walk :as walk]
+      [com.fulcrologic.guardrails.core :refer [=> >def >defn]]
+      [com.wsscode.async.async-cljs
+       :as
+       casync
+       :refer
+       [<!maybe <? <?maybe chan? go-promise let-chan]]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.trace :as pt]
+      [edn-query-language.core :as eql]
+      [goog.object :as gobj])
+     (:require-macros com.wsscode.pathom.core)]))
 
 ;; pathom core
 
@@ -124,8 +139,9 @@
     #{}
     children))
 
-(defn deep-merge [& xs]
+(defn deep-merge
   "Merges nested maps without overwriting existing keys."
+  [& xs]
   (if (every? #(or (map? %) (nil? %)) xs)
     (apply merge-with deep-merge xs)
     (last xs)))
@@ -133,16 +149,17 @@
 (defn query->ast
   "Given a query expression convert it into an AST."
   [query-expr]
-  (pp/query->ast query-expr))
+  (eql/query->ast query-expr))
 
 (defn query->ast1
   "Call query->ast and return the first children."
   [query-expr]
   (-> (query->ast query-expr) :children first))
 
-(defn ast->query [query-ast]
+(defn ast->query
   "Given an AST convert it back into a query expression."
-  (pp/ast->expr query-ast true))
+  [query-ast]
+  (eql/ast->expr query-ast true))
 
 (defn filter-ast [f ast]
   (->> ast
@@ -262,8 +279,6 @@
 (defn atom? [x]
   #?(:clj  (instance? IDeref x)
      :cljs (satisfies? IDeref x)))
-
-(defn normalize-atom [x] (if (atom? x) x (atom x)))
 
 (def special-outputs #{::reader-error ::not-found})
 

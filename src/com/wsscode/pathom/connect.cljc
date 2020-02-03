@@ -1,22 +1,46 @@
 (ns com.wsscode.pathom.connect
-  #?(:cljs [:require-macros com.wsscode.pathom.connect])
-  (:require [#?(:clj  com.wsscode.async.async-clj
-                :cljs com.wsscode.async.async-cljs)
-             :as p.async
-             :refer [let-chan let-chan* go-promise go-catch <? <?maybe <!maybe]]
-            [clojure.core.async :as async :refer [<! >! go put! go-loop]]
-            [clojure.set :as set]
-            [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [com.fulcrologic.guardrails.core :refer [>def >defn >fdef => | <- ?]]
-            [com.wsscode.common.combinatorics :as combo]
-            [com.wsscode.pathom.connect.indexes :as pci]
-            [com.wsscode.pathom.connect.planner :as pcp]
-            [com.wsscode.pathom.core :as p]
-            [com.wsscode.pathom.misc :as p.misc]
-            [com.wsscode.pathom.parser :as pp]
-            [com.wsscode.pathom.trace :as pt]
-            [edn-query-language.core :as eql]))
+  #?@
+   (:clj
+    [(:require
+      [clojure.core.async :as async :refer [<! >! go]]
+      [clojure.set :as set]
+      [clojure.spec.alpha :as s]
+      [clojure.spec.gen.alpha :as gen]
+      [com.fulcrologic.guardrails.core :refer [>def]]
+      [com.wsscode.async.async-clj
+       :as
+       p.async
+       :refer
+       [<!maybe <? <?maybe go-catch go-promise let-chan let-chan*]]
+      [com.wsscode.common.combinatorics :as combo]
+      [com.wsscode.pathom.connect.indexes :as pci]
+      [com.wsscode.pathom.connect.planner :as pcp]
+      [com.wsscode.pathom.core :as p]
+      [com.wsscode.pathom.misc :as p.misc]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.trace :as pt]
+      [edn-query-language.core :as eql])]
+    :cljs
+    [(:require
+      [clojure.core.async :as async :refer [<! >! go]]
+      [clojure.set :as set]
+      [clojure.spec.alpha :as s]
+      [clojure.spec.gen.alpha :as gen]
+      [com.fulcrologic.guardrails.core :refer [>def]]
+      [com.wsscode.async.async-cljs
+       :as
+       p.async
+       :refer
+       [<!maybe <? <?maybe go-catch go-promise let-chan let-chan*]]
+      [com.wsscode.common.combinatorics :as combo]
+      [com.wsscode.pathom.connect.indexes :as pci]
+      [com.wsscode.pathom.connect.planner :as pcp]
+      [com.wsscode.pathom.core :as p]
+      [com.wsscode.pathom.misc :as p.misc]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.trace :as pt]
+      [edn-query-language.core :as eql])
+     (:require-macros com.wsscode.pathom.connect)]))
 
 (declare reader3-run-node data->shape)
 
@@ -261,27 +285,28 @@
   This is a low level function, for adding to your index prefer using `pc/register`."
   ([indexes sym] (add indexes sym {}))
   ([indexes sym sym-data]
-   (let [provides (normalize-io (get sym-data ::output []))
+   (let [provides                             (normalize-io (get sym-data ::output []))
          {::keys [input output] :as sym-data} (merge {::sym      sym
                                                       ::input    #{}
                                                       ::provides provides}
-                                                     sym-data)]
-     (let [input' (if (and (= 1 (count input))
-                           (contains? (get-in indexes [::index-io #{}]) (first input)))
-                    #{}
-                    input)]
-       (merge-indexes indexes
-         (cond-> {::index-resolvers  {sym sym-data}
-                  ::index-attributes (index-attributes sym-data)
-                  ::index-io         {input' provides}
-                  ::index-oir        (reduce (fn [indexes out-attr]
-                                               (cond-> indexes
-                                                 (not= #{out-attr} input)
-                                                 (update-in [out-attr input] p.misc/sconj sym)))
-                                       {}
-                                       (flat-query output))}
-           (= 1 (count input'))
-           (assoc ::idents #{(first input')})))))))
+                                                     sym-data)
+         input'                               (if (and (= 1 (count input))
+                                                       (contains? (get-in indexes [::index-io #{}]) (first input)))
+                                                #{}
+                                                input)]
+     (merge-indexes
+      indexes
+      (cond-> {::index-resolvers  {sym sym-data}
+               ::index-attributes (index-attributes sym-data)
+               ::index-io         {input' provides}
+               ::index-oir        (reduce (fn [indexes out-attr]
+                                            (cond-> indexes
+                                              (not= #{out-attr} input)
+                                              (update-in [out-attr input] p.misc/sconj sym)))
+                                          {}
+                                          (flat-query output))}
+        (= 1 (count input'))
+        (assoc ::idents #{(first input')}))))))
 
 (defn add-mutation
   [indexes sym {::keys [params output] :as data}]
@@ -587,8 +612,8 @@
 (defn split-good-bad-keys [entity]
   (let [{bad-keys  true
          good-keys false} (group-by #(contains? p/break-values (second %)) entity)
-        good-keys (into #{} (map first) good-keys)
-        bad-keys  (into #{} (map first) bad-keys)]
+        good-keys         (into #{} (map first) good-keys)
+        bad-keys          (into #{} (map first) bad-keys)]
     [good-keys bad-keys]))
 
 (defn path-cost [{::keys   [resolver-weights]
@@ -629,7 +654,7 @@
 
 (defn decrease-path-costs [{::keys [resolver-weights resolver-weight-decrease-amount]
                             :or    {resolver-weight-decrease-amount 1}} plan]
-  (if resolver-weights
+  (when resolver-weights
     (swap! resolver-weights
       #(reduce
          (fn [rw rsym]
@@ -1066,7 +1091,7 @@
 (defn reader3-run-resolver-node
   "Call a run graph node resolver and execute it."
   [{::keys   [indexes]
-    ::p/keys [async-parser? processing-sequence]
+    ::p/keys [async-parser?]
     :as      env}
    plan
    {::keys     [sym]
@@ -1194,15 +1219,14 @@
     plan))
 
 (defn reader3
-  [{::keys   [indexes max-resolver-weight]
+  [{::keys   [indexes]
     ::p/keys [async-parser?]
-    :or      {max-resolver-weight 3600000}
     :as      env}]
   (let [ast            (reader3-prepare-ast env)
         available-data (-> env p/entity data->shape eql/query->ast pci/ast->io)
         plan           (reader3-compute-run-graph
-                         (merge env indexes {:edn-query-language.ast/node ast
-                                             ::pcp/available-data         available-data}))]
+                        (merge env indexes {:edn-query-language.ast/node ast
+                                            ::pcp/available-data         available-data}))]
     (if-let [root (pcp/get-root-node plan)]
       (if async-parser?
         (go-promise

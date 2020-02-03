@@ -18,6 +18,7 @@ docs/assets/js/book/manifest.edn
 node_modules
 notes
 out
+out.svg
 pom.xml
 pom.xml.asc
 workspaces/assets/js

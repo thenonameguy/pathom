@@ -175,23 +175,23 @@
 (comment
   (let [props     (gen/generate (gen/vector-distinct gen/keyword-ns {:min-elements 8
                                                                      :max-elements 100})
-                    4)
+                                4)
         query-gen (eql/make-gen {::eql/gen-property
-                                     (fn [_] (gen/elements props))
+                                 (fn [_] (gen/elements props))
 
-                                     ::eql/gen-params
-                                     (fn [_] (gen/map gen/keyword gen/simple-type-printable {:max-elements 3}))}
-                    ::eql/gen-query)
-        queries   (take 20 (gen/sample-seq query-gen 16))]
+                                 ::eql/gen-params
+                                 (fn [_] (gen/map gen/keyword gen/simple-type-printable {:max-elements 3}))}
+                                ::eql/gen-query)
+        queries (take 20 (gen/sample-seq query-gen 16))]
     (def queries queries))
 
-  (let [env          pct/parser-env
-        plugins      [pp/profile-plugin]
-        parser       (p/parser {::p/plugins plugins
-                                :mutate     pt/mutate-fn})
+  (let [env     pct/parser-env
+        plugins [pp/profile-plugin]
+        parser  (p/parser {::p/plugins plugins
+                           :mutate     pt/mutate-fn})
 
-        async-parser (p/async-parser {::p/plugins plugins
-                                      :mutate     pt/mutate-fn})
+        async-parser                   (p/async-parser {::p/plugins plugins
+                                                        :mutate     pt/mutate-fn})
         {:keys [async-reader] :as env} env]
 
     (doseq [query queries]
@@ -199,7 +199,7 @@
 
     #_(criterium/with-progress-reporting
         (criterium/bench
-          (doseq [query queries]
+         (doseq [query queries]
             #_(parser env query)
             ((comp <!! async-parser) (assoc env ::p/reader async-reader) query)))))
 
