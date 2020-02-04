@@ -1,6 +1,6 @@
 (ns com.wsscode.pathom.workspaces.parallel-parser-cards
   (:require [com.wsscode.pathom.connect :as pc]
-            [com.wsscode.common.async-cljs :refer [go-catch <?]]
+            [com.wsscode.async.async-cljs :refer [go-catch <?]]
             [nubank.workspaces.card-types.react :as ct.react]
             [com.wsscode.pathom.core :as p]
             [cljs.core.async :as async :refer [<!]]

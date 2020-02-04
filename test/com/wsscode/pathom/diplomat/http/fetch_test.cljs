@@ -3,7 +3,7 @@
             [nubank.workspaces.core :as ws]
             [com.wsscode.pathom.diplomat.http :as p.http]
             [com.wsscode.pathom.diplomat.http.fetch :as fetch]
-            [com.wsscode.common.async-cljs :refer [let-chan <!p go-catch <? <?maybe]]))
+            [com.wsscode.async.async-cljs :refer [let-chan <!p go-catch <? <?maybe]]))
 
 (ws/deftest test-build-request-map
   (are [req out] (= (fetch/build-request-map req) out)

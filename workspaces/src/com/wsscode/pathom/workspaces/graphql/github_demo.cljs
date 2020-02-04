@@ -1,6 +1,6 @@
 (ns com.wsscode.pathom.workspaces.graphql.github-demo
   (:require
-    [com.wsscode.common.async-cljs :refer [go-promise let-chan <!p go-catch <? <?maybe]]
+    [com.wsscode.async.async-cljs :refer [go-promise let-chan <!p go-catch <? <?maybe]]
     [com.wsscode.pathom.book.util.local-storage :as ls]
     [com.wsscode.pathom.connect :as pc]
     [com.wsscode.pathom.connect.graphql2 :as pcg]
