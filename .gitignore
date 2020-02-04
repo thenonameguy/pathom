@@ -15,6 +15,7 @@
 /target
 docs/assets/js/book/cljs-runtime
 docs/assets/js/book/manifest.edn
+docs/**/*.js.map
 node_modules
 notes
 out

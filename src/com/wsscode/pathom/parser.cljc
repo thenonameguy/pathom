@@ -22,7 +22,8 @@
 
 (>def ::provides (s/coll-of (s/or :attr :com.wsscode.pathom.connect/attribute
                                   :sym :com.wsscode.pathom.connect/sym
-                                  :ident :edn-query-language.core/ident) :kind set?))
+                                  :ident ::eql/ident
+                                  :join-context ::eql/join-context) :kind set?))
 (>def ::max-key-iterations int?)
 (>def ::processing-recheck-timer (s/nilable pos-int?))
 (>def ::external-wait-ignore-timeout (s/nilable pos-int?))
