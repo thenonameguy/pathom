@@ -1,19 +1,31 @@
 (ns com.wsscode.pathom.connect-test
-  (:require [clojure.test :refer [is are testing]]
-            #?(:clj
-               [com.wsscode.common.async-clj :refer [go-catch go-promise <!maybe <?]])
-            [nubank.workspaces.core :refer [deftest]]
-            #?(:clj  [clojure.core.async :as async :refer [go <! <!!]]
-               :cljs [cljs.core.async :as async :refer-macros [go] :refer [<!]])
-            [com.wsscode.pathom.core :as p]
-            [com.wsscode.pathom.connect :as pc]
-            [com.wsscode.pathom.connect.test :as pct]
-            [com.wsscode.pathom.parser :as pp]
-            [com.wsscode.pathom.trace :as pt]
-            [com.wsscode.pathom.sugar :as ps]
-            [clojure.walk :as walk])
-  #?(:clj
-     (:import (clojure.lang ExceptionInfo))))
+  #?@
+   (:clj
+    [(:require
+      [clojure.core.async :as async :refer [<! go]]
+      [clojure.test :refer [is testing]]
+      [clojure.walk :as walk]
+      [com.wsscode.async.async-clj :refer [go-catch go-promise]]
+      [com.wsscode.pathom.connect :as pc]
+      [com.wsscode.pathom.connect.test :as pct]
+      [com.wsscode.pathom.core :as p]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.sugar :as ps]
+      [com.wsscode.pathom.trace :as pt]
+      [nubank.workspaces.core :refer [deftest]])
+     (:import clojure.lang.ExceptionInfo)]
+    :cljs
+    [(:require
+      [cljs.core.async :as async :refer-macros [go]]
+      [clojure.test :refer [is testing]]
+      [clojure.walk :as walk]
+      [com.wsscode.pathom.connect :as pc]
+      [com.wsscode.pathom.connect.test :as pct]
+      [com.wsscode.pathom.core :as p]
+      [com.wsscode.pathom.parser :as pp]
+      [com.wsscode.pathom.sugar :as ps]
+      [com.wsscode.pathom.trace :as pt]
+      [nubank.workspaces.core :refer [deftest]])]))
 
 (declare quick-parser)
 
@@ -38,7 +50,7 @@
   {1 "Live here somewhere"})
 
 (defn inc-counter [{::keys [counters]} key]
-  (if counters (swap! counters update key (fnil inc 0))))
+  (when counters (swap! counters update key (fnil inc 0))))
 
 (defresolver `user-by-id
   {::pc/input  #{:user/id}
@@ -3421,22 +3433,22 @@
        (let [c      (atom 0)
              config {::p/env       {:counter c}
                      ::pc/register [(pc/resolver 'a
-                                      {::pc/output [:a]}
-                                      (fn [env _]
-                                        {:a 1 :b 3}))
+                                                 {::pc/output [:a]}
+                                                 (fn [env _]
+                                                   {:a 1 :b 3}))
 
                                     (pc/resolver 'base
-                                      {::pc/input  #{:a}
-                                       ::pc/output [:b :z]}
-                                      (fn [{:keys [counter]} _]
-                                        (swap! counter inc)
-                                        {:b 2 :z 10}))]}
-             check  (fn [parser]
-                      (reset! c 0)
-                      (parser config [:b])
-                      (let [cs @c]
-                        (parser config [:b :z])
-                        [cs @c]))]
+                                                 {::pc/input  #{:a}
+                                                  ::pc/output [:b :z]}
+                                                 (fn [{:keys [counter]} _]
+                                                   (swap! counter inc)
+                                                   {:b 2 :z 10}))]}
+             check (fn [parser]
+                     (reset! c 0)
+                     (parser config [:b])
+                     (let [cs @c]
+                       (parser config [:b :z])
+                       [cs @c]))]
          (is (= [0 1] (check quick-parser)))
          (is (= [0 1] (check quick-parser-serial)))
          (is (= [0 1] (check quick-parser-async))))
@@ -3444,59 +3456,59 @@
        (let [c (atom 0)]
          (quick-parser {::p/env       {:counter c}
                         ::pc/register [(pc/resolver 'a
-                                         {::pc/output [:a]}
-                                         (fn [env _]
-                                           {:a 1 :b 3}))
+                                                    {::pc/output [:a]}
+                                                    (fn [env _]
+                                                      {:a 1 :b 3}))
 
                                        (pc/resolver 'base
-                                         {::pc/input  #{:a}
-                                          ::pc/output [:b :z]}
-                                         (fn [{:keys [counter]} _]
-                                           (swap! counter inc)
-                                           {:b 2 :z 10}))]}
+                                                    {::pc/input  #{:a}
+                                                     ::pc/output [:b :z]}
+                                                    (fn [{:keys [counter]} _]
+                                                      (swap! counter inc)
+                                                      {:b 2 :z 10}))]}
            '[:b :z])
          (is (= 1 @c))))
 
      (testing "map of maps"
        (is (consistent-parser-result?
-             {::pc/register [(pc/resolver 'a
-                               {::pc/output [{:a [:b :c]}]}
-                               (fn [env _]
-                                 ^::p/map-of-maps
-                                 {:a {:x {:b 2 :c 9}
-                                      :y {:b 3 :c 8}}}))]}
-             [{:a ^::p/map-of-maps [:b]}]
+            {::pc/register [(pc/resolver 'a
+                                         {::pc/output [{:a [:b :c]}]}
+                                         (fn [env _]
+                                           ^::p/map-of-maps
+                                           {:a {:x {:b 2 :c 9}
+                                                :y {:b 3 :c 8}}}))]}
+            [{:a ^::p/map-of-maps [:b]}]
              ; =>
-             {:a {:x {:b 2}
-                  :y {:b 3}}})))
+            {:a {:x {:b 2}
+                 :y {:b 3}}})))
 
      (testing "using root-query"
        (is (= (quick-parser {::pc/register [(pc/resolver 'base
-                                              {::pc/output [{:base [{:deep [:data]}]}]}
-                                              (fn [env _]
-                                                {:base {:deep {:data "value"}}}))
+                                                         {::pc/output [{:base [{:deep [:data]}]}]}
+                                                         (fn [env _]
+                                                           {:base {:deep {:data "value"}}}))
 
                                             (pc/resolver 'root-query
-                                              {::pc/output [:root-query]}
-                                              (fn [{::p/keys [root-query]} _]
-                                                {:root-query root-query}))]}
-                '[{:base [{:deep [:root-query]}]}])
+                                                         {::pc/output [:root-query]}
+                                                         (fn [{::p/keys [root-query]} _]
+                                                           {:root-query root-query}))]}
+                            '[{:base [{:deep [:root-query]}]}])
               {:base {:deep {:root-query [{:base [{:deep [:root-query]}]}]}}})))
 
      (testing "parallel mutation join with environment override"
        (is (= (quick-parser {::pc/register [(pc/resolver 'token-value
-                                              {::pc/output [:nada
-                                                            {:token-complex [:id]}]}
-                                              (fn [env _]
-                                                (let [token 123]
-                                                  {:nada          nil
-                                                   :token-complex {:id     token
-                                                                   ::p/env (assoc env :extra (str token " - data"))}})))
+                                                         {::pc/output [:nada
+                                                                       {:token-complex [:id]}]}
+                                                         (fn [env _]
+                                                           (let [token 123]
+                                                             {:nada          nil
+                                                              :token-complex {:id     token
+                                                                              ::p/env (assoc env :extra (str token " - data"))}})))
 
                                             (pc/resolver 'env-data
-                                              {::pc/output [:extra]}
-                                              (fn [{:keys [extra]} _]
-                                                {:extra extra}))]}
+                                                         {::pc/output [:extra]}
+                                                         (fn [{:keys [extra]} _]
+                                                           {:extra extra}))]}
                 '[:nada
                   {:token-complex [:id
                                    :extra]}])
@@ -3505,67 +3517,67 @@
      (testing "error from uncached resolver"
        (is (= (quick-parser {::p/env       {}
                              ::pc/register [(pc/resolver 'a
-                                              {::pc/input  #{:id}
-                                               ::pc/output [:certificates]
-                                               ::pc/cache? false}
-                                              (fn [_ _]
-                                                (throw (ex-info "Error" {}))))]}
-                [{[:id 123]
-                  [:certificates]}])
+                                                         {::pc/input  #{:id}
+                                                          ::pc/output [:certificates]
+                                                          ::pc/cache? false}
+                                                         (fn [_ _]
+                                                           (throw (ex-info "Error" {}))))]}
+                            [{[:id 123]
+                              [:certificates]}])
               {[:id 123]                       {:certificates :com.wsscode.pathom.core/reader-error},
                :com.wsscode.pathom.core/errors {[[:id 123] :certificates] "class clojure.lang.ExceptionInfo: Error - {}"}})))
 
      (testing "error during nested processing with error"
        (is (= (quick-parser {::p/env       {::pp/key-process-timeout 2000}
                              ::pc/register [(pc/resolver 'a
-                                              {::pc/input  #{:id}
-                                               ::pc/output [:certificates]}
-                                              (fn [_ _]
-                                                (throw (ex-info "Deu Ruim" {}))))
+                                                         {::pc/input  #{:id}
+                                                          ::pc/output [:certificates]}
+                                                         (fn [_ _]
+                                                           (throw (ex-info "Deu Ruim" {}))))
                                             (pc/resolver 'b
-                                              {::pc/input  #{:certificates}
-                                               ::pc/output [:whatever]}
-                                              (fn [_ _]
-                                                {:whatever "bla"}))
+                                                         {::pc/input  #{:certificates}
+                                                          ::pc/output [:whatever]}
+                                                         (fn [_ _]
+                                                           {:whatever "bla"}))
                                             (pc/resolver 'c
-                                              {::pc/input  #{:whatever}
-                                               ::pc/output [:c]}
-                                              (fn [_ _]
-                                                {:c 1}))
+                                                         {::pc/input  #{:whatever}
+                                                          ::pc/output [:c]}
+                                                         (fn [_ _]
+                                                           {:c 1}))
                                             (pc/resolver 'd
-                                              {::pc/input  #{:certificates}
-                                               ::pc/output [:d]}
-                                              (fn [_ _]
-                                                {:d 1}))]}
-                [{[:id 123]
-                  [:c :d]}])
+                                                         {::pc/input  #{:certificates}
+                                                          ::pc/output [:d]}
+                                                         (fn [_ _]
+                                                           {:d 1}))]}
+                            [{[:id 123]
+                              [:c :d]}])
               {[:id 123]                       {:c :com.wsscode.pathom.core/reader-error,
                                                 :d :com.wsscode.pathom.core/reader-error},
                :com.wsscode.pathom.core/errors {[[:id 123] :c] "class clojure.lang.ExceptionInfo: Deu Ruim - {}",
                                                 [[:id 123] :d] "class clojure.lang.ExceptionInfo: Deu Ruim - {}"}}))
        (is (= (quick-parser {::p/env       {::pp/key-process-timeout 2000}
                              ::pc/register [(pc/resolver 'a
-                                              {::pc/input  #{:id}
-                                               ::pc/output [:certificates]}
-                                              (fn [_ _]
-                                                (throw (ex-info "Deu Ruim" {}))))
+                                                         {::pc/input  #{:id}
+                                                          ::pc/output [:certificates]}
+                                                         (fn [_ _]
+                                                           (throw (ex-info "Deu Ruim" {}))))
                                             (pc/resolver 'b
-                                              {::pc/input  #{:certificates}
-                                               ::pc/output [:whatever]}
-                                              (fn [_ _]
-                                                {:whatever "bla"}))
+                                                         {::pc/input  #{:certificates}
+                                                          ::pc/output [:whatever]}
+                                                         (fn [_ _]
+                                                           {:whatever "bla"}))
                                             (pc/resolver 'c
-                                              {::pc/input  #{:whatever}
-                                               ::pc/output [:c]}
-                                              (fn [_ _]
-                                                {:c 1}))
+                                                         {::pc/input  #{:whatever}
+                                                          ::pc/output [:c]}
+                                                         (fn [_ _]
+                                                           {:c 1}))
                                             (pc/resolver 'd
-                                              {::pc/input  #{:whatever}
-                                               ::pc/output [:d]}
-                                              (fn [_ _]
-                                                {:d 1}))]}
-                [{[:id 123]
-                  [:c :d]}])
+                                                         {::pc/input  #{:whatever}
+                                                          ::pc/output [:d]}
+                                                         (fn [_ _]
+                                                           {:d 1}))]}
+                            [{[:id 123]
+                              [:c :d]}])
               {[:id 123]                       {:c :com.wsscode.pathom.core/reader-error,
                                                 :d :com.wsscode.pathom.core/reader-error},
                :com.wsscode.pathom.core/errors {[[:id 123] :c] "class clojure.lang.ExceptionInfo: Deu Ruim - {}",
@@ -3573,118 +3585,118 @@
 
        (is (= (quick-parser {::p/env       {::pp/key-process-timeout 2000}
                              ::pc/register [(pc/resolver 'a
-                                              {::pc/input  #{:id}
-                                               ::pc/output [:certificates]
-                                               ::pc/cache? false}
-                                              (fn [_ _]
-                                                (throw (ex-info "Deu Ruim" {}))))
+                                                         {::pc/input  #{:id}
+                                                          ::pc/output [:certificates]
+                                                          ::pc/cache? false}
+                                                         (fn [_ _]
+                                                           (throw (ex-info "Deu Ruim" {}))))
                                             (pc/resolver 'b
-                                              {::pc/input  #{:certificates}
-                                               ::pc/output [:whatever]}
-                                              (fn [_ _]
-                                                {:whatever "bla"}))
+                                                         {::pc/input  #{:certificates}
+                                                          ::pc/output [:whatever]}
+                                                         (fn [_ _]
+                                                           {:whatever "bla"}))
                                             (pc/resolver 'c
-                                              {::pc/input  #{:whatever}
-                                               ::pc/output [:c]}
-                                              (fn [_ _]
-                                                {:c 1}))
+                                                         {::pc/input  #{:whatever}
+                                                          ::pc/output [:c]}
+                                                         (fn [_ _]
+                                                           {:c 1}))
                                             (pc/resolver 'd
-                                              {::pc/input  #{:whatever}
-                                               ::pc/output [:d]}
-                                              (fn [_ _]
-                                                {:d 1}))]}
-                [{[:id 123]
-                  [:c :d]}]))))
+                                                         {::pc/input  #{:whatever}
+                                                          ::pc/output [:d]}
+                                                         (fn [_ _]
+                                                           {:d 1}))]}
+                            [{[:id 123]
+                              [:c :d]}]))))
 
      (testing "global resolver times out"
-       (is (= {:com.wsscode.pathom.core/errors {[] "class clojure.lang.ExceptionInfo: Parallel read timeout - {:timeout 200}"}}
+       (is (= {::p/errors {[] "class clojure.lang.ExceptionInfo: Parallel read timeout - {:timeout 200, :path [], :root-query [:whatever]}"}}
               (quick-parser {::p/env       {::pp/key-process-timeout 200}
                              ::pc/register [(pc/resolver 'a
-                                              {::pc/input  #{}
-                                               ::pc/output [:whatever]}
-                                              (fn [_ _]
-                                                {:whatever (Thread/sleep 210)}))]}
+                                                         {::pc/input  #{}
+                                                          ::pc/output [:whatever]}
+                                                         (fn [_ _]
+                                                           {:whatever (Thread/sleep 210)}))]}
                 [:whatever]))))
 
      (testing "rename ident reads"
        (is (= (async/<!!
-                (parser-p {}
-                  [{'([:a 3] {:pathom/as :c}) [:b]}]))
+               (parser-p {}
+                         [{'([:a 3] {:pathom/as :c}) [:b]}]))
               {:c {:b 13}}))
        (is (= (async/<!!
-                (parser-p {}
-                  ['(:a {:pathom/as :c})
-                   '(:a {:pathom/as :d})]))
+               (parser-p {}
+                         ['(:a {:pathom/as :c})
+                          '(:a {:pathom/as :d})]))
               {:c 1
                :d 1}))
        (is (= (quick-parser
-                {::pc/register [(pc/resolver 'foo-resolver
-                                  {::pc/input  #{}
-                                   ::pc/output [{:foos [:foo-id]}]}
-                                  (fn [_ _]
-                                    {:foos (map #(hash-map :foo-id %) (range 3))}))
+               {::pc/register [(pc/resolver 'foo-resolver
+                                            {::pc/input  #{}
+                                             ::pc/output [{:foos [:foo-id]}]}
+                                            (fn [_ _]
+                                              {:foos (map #(hash-map :foo-id %) (range 3))}))
 
-                                (pc/resolver 'param-resolver
-                                  {::pc/input  #{:foo-id}
-                                   ::pc/output [:n]
-                                   ::pc/batch? true}
-                                  (fn [env input]
-                                    (let [n (-> env p/params :n)]
-                                      (mapv (constantly {:n n}) input))))]}
-                `[{:foos [(:n {:pathom/as :a :n 5})]}])
+                               (pc/resolver 'param-resolver
+                                            {::pc/input  #{:foo-id}
+                                             ::pc/output [:n]
+                                             ::pc/batch? true}
+                                            (fn [env input]
+                                              (let [n (-> env p/params :n)]
+                                                (mapv (constantly {:n n}) input))))]}
+               `[{:foos [(:n {:pathom/as :a :n 5})]}])
               {:foos [{:a 5} {:a 5} {:a 5}]})))
 
      (testing "env not accessible"
        (is (= (async/<!!
-                (parser-p {}
+               (parser-p {}
                   [:provide-env ::pc/env]))
               {:provide-env "x" ::pc/env ::p/not-found})))
 
      (testing "regressions"
        (testing "parallel bounded recursions"
          (is (= (quick-parser
-                  {::p/env       {::p/process-error
-                                  (fn [_ e]
-                                    (.printStackTrace e)
-                                    e)}
-                   ::pc/register [(pc/resolver 'my-example
-                                    {::pc/input  #{:r}
-                                     ::pc/output [:r {:x [:r]}]}
-                                    (fn [_ {r :r}]
-                                      (if (< r 5)
-                                        {:r r
-                                         :x [{:r (inc r)}]}
-                                        {:r r})))]}
-                  '[{[:r 0] [:r {:x 2}]}])
+                 {::p/env       {::p/process-error
+                                 (fn [_ e]
+                                   (.printStackTrace e)
+                                   e)}
+                  ::pc/register [(pc/resolver 'my-example
+                                              {::pc/input  #{:r}
+                                               ::pc/output [:r {:x [:r]}]}
+                                              (fn [_ {r :r}]
+                                                (if (< r 5)
+                                                  {:r r
+                                                   :x [{:r (inc r)}]}
+                                                  {:r r})))]}
+                 '[{[:r 0] [:r {:x 2}]}])
                 {[:r 0] {:r 0 :x [{:r 1 :x [{:r 2 :x []}]}]}})))
 
        (testing "edge deadlock on parallel + batch + multi-step resolver requirements"
          (is (= (async/<!!
-                  (parser-p {::p/entity  (atom {:deadlock-1 1})
-                             ::pt/trace* trace}
-                    [{:deadlock-items [:deadlock-2 :deadlock-3]}]))
+                 (parser-p {::p/entity  (atom {:deadlock-1 1})
+                            ::pt/trace* trace}
+                           [{:deadlock-items [:deadlock-2 :deadlock-3]}]))
                 {:deadlock-items [{:deadlock-2 2, :deadlock-3 3}]})))
 
        (testing "edge deadlock on multi-input from the same resolver"
          (is (= (async/<!!
                   (custom-pparser [thing->dep provide-nothing require-a-b-from-nothing]
-                    {} [:a :c]))
+                                  {} [:a :c]))
                 {:a                              ::p/not-found
                  :c                              ::p/not-found
                  :com.wsscode.pathom.core/errors {[:c] "class clojure.lang.ExceptionInfo: Insufficient resolver output - {:com.wsscode.pathom.parser/response-value {}, :key :a}"}})))
 
        (testing "when a response has an error value but a later resolver gets a good one, the later must be used."
          (is (= (quick-parser {::pc/register [(pc/resolver 'not
-                                                {::pc/output [:not :works]}
-                                                (fn [_ _]
-                                                  (Thread/sleep 10)
-                                                  (throw (ex-info "Deu ruim" {}))))
+                                                           {::pc/output [:not :works]}
+                                                           (fn [_ _]
+                                                             (Thread/sleep 10)
+                                                             (throw (ex-info "Deu ruim" {}))))
 
                                               (pc/resolver 'works
-                                                {::pc/output [:works]}
-                                                (fn [env _]
-                                                  (Thread/sleep 50)
-                                                  {:works 42}))]}
+                                                           {::pc/output [:works]}
+                                                           (fn [env _]
+                                                             (Thread/sleep 50)
+                                                             {:works 42}))]}
                   '[:works :not])
                 {:not                            :com.wsscode.pathom.core/reader-error,
                  :works                          42,
@@ -3692,8 +3704,8 @@
 
        (testing "partial resolver data, request fully"
          (is (= (async/<!!
-                  (parser-p {::p/entity  (atom {})
-                             ::pt/trace* trace}
+                 (parser-p {::p/entity  (atom {})
+                            ::pt/trace* trace}
                     [:reg-nf1-a
                      :reg-nf1-b
                      ]))
@@ -3701,24 +3713,24 @@
 
        (testing "external wait get notification when waiting for something in middle path"
          (is (= (quick-parser {::pc/register [(pc/resolver 'a
-                                                {::pc/output [:a]}
-                                                (fn [env _]
-                                                  (go-catch
-                                                    (<! (async/timeout 200))
-                                                    (throw (ex-info "Er" {})))))
+                                                           {::pc/output [:a]}
+                                                           (fn [env _]
+                                                             (go-catch
+                                                              (<! (async/timeout 200))
+                                                              (throw (ex-info "Er" {})))))
 
                                               (pc/resolver 'b
-                                                {::pc/input  #{:a}
-                                                 ::pc/output [:b]}
-                                                (fn [env {:keys [a]}]
-                                                  {:b (inc a)}))
+                                                           {::pc/input  #{:a}
+                                                            ::pc/output [:b]}
+                                                           (fn [env {:keys [a]}]
+                                                             {:b (inc a)}))
 
                                               (pc/resolver 'c
-                                                {::pc/input  #{:b}
-                                                 ::pc/output [:c]}
-                                                (fn [env {:keys [b]}]
-                                                  {:c (inc b)}))]
-                               ::p/env       {::pp/external-wait-ignore-timeout 1000}}
+                                                           {::pc/input  #{:b}
+                                                            ::pc/output [:c]}
+                                                           (fn [env {:keys [b]}]
+                                                             {:c (inc b)}))]
+                               ::p/env {::pp/external-wait-ignore-timeout 1000}}
                   '[:c
                     {:>/b [:b]}])
                 {:>/b                            {:b :com.wsscode.pathom.core/reader-error}
@@ -3729,11 +3741,11 @@
 
        (testing "fix empty provides from external wait ignore timeout"
          (is (= (quick-parser {::pc/register [(pc/resolver 'multi-input
-                                                {::pc/output [:b :c]}
-                                                (fn [env {:keys [a]}]
-                                                  (Thread/sleep 500)
-                                                  {:b 1
-                                                   :c 2}))]
+                                                           {::pc/output [:b :c]}
+                                                           (fn [env {:keys [a]}]
+                                                             (Thread/sleep 500)
+                                                             {:b 1
+                                                              :c 2}))]
                                ::p/env       {::pp/external-wait-ignore-timeout 200}}
-                  '[{:>/bla [:b :c]}])
+                              '[{:>/bla [:b :c]}])
                 #:>{:bla {:c 2, :b 1}}))))))
