@@ -27,6 +27,7 @@
 (>def ::max-key-iterations int?)
 (>def ::processing-recheck-timer (s/nilable pos-int?))
 (>def ::external-wait-ignore-timeout (s/nilable pos-int?))
+(>def ::disable-race-condition-timeout? (s/nilable boolean?))
 
 (defn- atom? [x]
   #?(:clj  (instance? IDeref x)
@@ -152,7 +153,7 @@
                       (recur (assoc res (ast->out-key ast) value) tail))
                     res)))))))
 
-(defn watch-pending-key [{::keys [key-watchers external-wait-ignore-timeout]
+(defn watch-pending-key [{::keys [key-watchers external-wait-ignore-timeout disable-race-condition-timeout?]
                           :or    {external-wait-ignore-timeout 3000}
                           :as    env} key]
   (let [ch (async/chan)]
@@ -161,7 +162,8 @@
       ; sometimes the watcher is too fast and finishes the process before we get to register
       ; the watcher. This timeout ensures that in those cases we still flush out the watched key
       ;; FIXME: this race should be resolved to not introduce 1ms latency per resolver
-      (<! (async/timeout 1))
+      (when-not disable-race-condition-timeout?
+        (<! (async/timeout 1)))
       (when (contains? @(get env :com.wsscode.pathom.core/entity) key)
         (trace env {::pt/event ::flush-watcher-safeguard :key key})
         (async/put! ch {::provides #{key}})
